@@ -163,6 +163,7 @@
             this.$emit('layout-before-mount', this.layout);
         },
         mounted: function() {
+
             this.$emit('layout-mounted', this.layout);
             this.$nextTick(function () {
                 validateLayout(this.layout);
@@ -194,6 +195,7 @@
                     });
                 });
             });
+
         },
         watch: {
             width: function (newval, oldval) {

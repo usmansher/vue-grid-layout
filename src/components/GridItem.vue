@@ -102,6 +102,11 @@
     export default {
         name: "GridItem",
         props: {
+            // If true, the container height swells and contracts to fit contents
+            isAutoSize: {
+                type: Boolean,
+                default: true
+            },
             /*cols: {
              type: Number,
              required: true
@@ -206,6 +211,7 @@
         inject: ["eventBus", "layout"],
         data: function () {
             return {
+                isLoaded: false,
                 cols: 1,
                 containerWidth: 100,
                 rowHeight: 30,
@@ -237,7 +243,10 @@
                 innerX: this.x,
                 innerY: this.y,
                 innerW: this.w,
-                innerH: this.h
+                innerH: this.h,
+                innerMinH: this.minH,
+                innerMaxH: this.maxh,
+
             }
         },
         created () {
@@ -246,6 +255,7 @@
             // Accessible refernces of functions for removing in beforeDestroy
             self.updateWidthHandler = function (width) {
                 self.updateWidth(width);
+
             };
 
             self.compactHandler = function (layout) {
@@ -266,6 +276,7 @@
 
             self.setRowHeightHandler = function (rowHeight) {
                 self.rowHeight = rowHeight;
+
             };
 
             self.setMaxRowsHandler = function (maxRows) {
@@ -331,8 +342,15 @@
             this.useCssTransforms = this.layout.useCssTransforms;
             this.useStyleCursor = this.layout.useStyleCursor;
             this.createStyle();
+
+
+            this.hasSlotContent();
         },
         watch: {
+
+            isLoaded: function() {
+                setTimeout(() => this.autoSize(), 500);
+            },
             isDraggable: function () {
                 this.draggable = this.isDraggable;
             },
@@ -441,6 +459,21 @@
             }
         },
         methods: {
+            hasSlotContent: function () {
+                console.log(this.$slots.default)
+                if(this.$slots.default && !this.isLoaded) {
+                    let time = setInterval(() => {
+                            if(this.$slots.default[0]) {
+                                this.isLoaded = true;
+                            }
+                    }, 500); 
+
+                    if(this.isLoaded) {
+                        time.clearInterval();
+                    }
+                }
+
+            },
             createStyle: function () {
                 if (this.x + this.w > this.cols) {
                     this.innerX = 0;
@@ -553,11 +586,11 @@
                 if (pos.w > this.maxW) {
                     pos.w = this.maxW;
                 }
-                if (pos.h < this.minH) {
-                    pos.h = this.minH;
+                if (pos.h < this.innerMinH) {
+                    pos.h = this.innerMinH;
                 }
-                if (pos.h > this.maxH) {
-                    pos.h = this.maxH;
+                if (pos.h > this.innerMaxH) {
+                    pos.h = this.innerMaxH;
                 }
 
                 if (pos.h < 1) {
@@ -794,8 +827,8 @@
                     }
                 }
                 if (this.resizable && !this.static) {
-                    let maximum = this.calcPosition(0,0,this.maxW, this.maxH);
-                    let minimum = this.calcPosition(0,0, this.minW, this.minH);
+                    let maximum = this.calcPosition(0,0,this.maxW, this.innerMaxH);
+                    let minimum = this.calcPosition(0,0, this.minW, this.innerMinH);
 
                     // console.log("### MAX " + JSON.stringify(maximum));
                     // console.log("### MIN " + JSON.stringify(minimum));
@@ -845,23 +878,29 @@
             },
             autoSize: function() {
                 // ok here we want to calculate if a resize is needed
-                this.previousW = this.innerW;
-                this.previousH = this.innerH;
+               
 
-                let newSize=this.$slots.default[0].elm.getBoundingClientRect();
-                let pos = this.calcWH(newSize.height, newSize.width, true);
+                // if(this.$refs.item.children[0].clientHeight) {
+                    // let newSize = this.$refs.item.children[0].getBoundingClientRect();
+                // }else{
+                    let newSize = this.$slots.default[0].elm.getBoundingClientRect();
+                // }
+              
+            
+                let pos = this.calcWH(newSize.height, newSize.width, 1);
                 if (pos.w < this.minW) {
                     pos.w = this.minW;
                 }
                 if (pos.w > this.maxW) {
                     pos.w = this.maxW;
                 }
-                if (pos.h < this.minH) {
-                    pos.h = this.minH;
+                if (pos.h < this.innerMinH) {
+                    pos.h = this.innerMinH;
                 }
-                if (pos.h > this.maxH) {
-                    pos.h = this.maxH;
+                if (pos.h > this.innerMaxH) {
+                    pos.h = this.innerMaxH;
                 }
+
 
                 if (pos.h < 1) {
                     pos.h = 1;
@@ -869,6 +908,9 @@
                 if (pos.w < 1) {
                     pos.w = 1;
                 }
+
+                this.innerMinH = pos.h;
+                this.innerMaxH = pos.h;
 
                 // this.lastW = x; // basically, this is copied from resizehandler, but shouldn't be needed
                 // this.lastH = y;
@@ -880,6 +922,8 @@
                     this.$emit("resized", this.i, pos.h, pos.w, newSize.height, newSize.width);
                     this.eventBus.$emit("resizeEvent", "resizeend", this.i, this.innerX, this.innerY, pos.h, pos.w);
                 }
+                    console.log(this.i, pos.h, pos.w, newSize.height, newSize.width)
+
             }
         },
     }

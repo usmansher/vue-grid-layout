@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div :style="{height: Math.floor(Math.random() * 100) + 'px'}">
         <span class="text">
             {{text}}
         </span>
